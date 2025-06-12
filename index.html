@@ -594,17 +594,17 @@
 
             // --- PDF Footer ---
             yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
-            const disclaimerText = "Kripto adalah aset yang sangat berisiko, pastikan kamu telah mempelajari, dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi.";
+            const disclaimerText = "Kripto adalah aset yang sangat berisiko. Pastikan kamu telah mempelajari dan mempertimbangkan dengan baik tentang aset kripto sebelum berinvestasi!";
             const splitDisclaimer = doc.splitTextToSize(disclaimerText, doc.internal.pageSize.getWidth() - (leftMargin * 2));
             doc.setFontSize(9);
             doc.setFont('helvetica', 'italic');
             doc.setTextColor(107, 114, 128);
             doc.text(splitDisclaimer, leftMargin, yPos);
-            yPos += (splitDisclaimer.length * 5) + 10;
+            yPos += (splitDisclaimer.length * 10) + 10;
             
             yPos = writeText("Salam,", { fontSize: 11, fontStyle: 'normal', color: '#000000' }, yPos);
             yPos += 15;
-            yPos = writeText("Edward C. Mangedong, S.Ked, AWP", { fontSize: 11, fontStyle: 'bold' }, yPos);
+            yPos = writeText("Edward C. Mangedong", { fontSize: 11, fontStyle: 'bold' }, yPos);
 
 
             doc.save(`Laporan Portofolio - ${pageUserName}.pdf`);
