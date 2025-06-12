@@ -141,6 +141,7 @@
         let selectedAsset = '';
         let userName = 'Investor';
         let chartInstances = {};
+        let isGeneratingPdf = false; // Flag to control chart animation
 
         // --- DOM ELEMENTS ---
         const welcomeScreen = document.getElementById('welcome-screen');
@@ -332,6 +333,9 @@
                                 }
                             }
                         }
+                    },
+                    animation: isGeneratingPdf ? false : {
+                        duration: 1000
                     }
                 }
             });
@@ -489,160 +493,163 @@
             
             downloadPdfBtn.disabled = true;
             
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'mm', 'a4');
-            const pageUserName = userName || 'Investor';
-            
-            let yPos = 20;
-            const leftMargin = 10;
-            const rightMargin = 10;
-            const pageWidth = doc.internal.pageSize.getWidth();
+            isGeneratingPdf = true;
+            renderAll(); // Re-render charts without animation
 
-            const writeText = (text, options, y) => {
-                doc.setFont('courier', options.fontStyle || 'normal');
-                doc.setFontSize(options.fontSize || 11);
-                doc.setTextColor(options.color || '#000000');
-                doc.text(text, leftMargin, y);
-                return y + (options.lineHeight || 7);
-            };
-            
-            // Add dashed border to all pages
-            const addBorder = (pdfDoc) => {
-                 const pageCount = pdfDoc.internal.getNumberOfPages();
-                 for (let i = 1; i <= pageCount; i++) {
-                    pdfDoc.setPage(i);
-                    pdfDoc.setLineDashPattern([2, 2], 0);
-                    pdfDoc.rect(5, 5, pdfDoc.internal.pageSize.getWidth() - 10, pdfDoc.internal.pageSize.getHeight() - 10, 'S');
-                 }
-                 pdfDoc.setLineDashPattern([], 0); // Reset dash pattern
-            };
-
-            // --- PDF Header ---
-            yPos = writeText(`Halo, ${pageUserName}!`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-            yPos = writeText("Terima kasih telah menggunakan Kinawa Calculator.", {}, yPos);
-            yPos = writeText("Berikut adalah hasil dari strategi Dollar Cost Averaging yang kamu lakukan.", {}, yPos + 2);
-            yPos += 10;
-
-            // --- Loop through each asset ---
-            for (const assetName of Object.keys(portfolio)) {
-                const assetData = portfolio[assetName];
-                const purchases = assetData.purchases;
-
-                if (purchases.length === 0) continue; 
+            setTimeout(() => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const pageUserName = userName || 'Investor';
                 
-                if (yPos > doc.internal.pageSize.getHeight() - 80) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                
-                // --- Chart ---
-                yPos = writeText(`GRAFIK PERTUMBUHAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-                yPos += 2;
-                const chartCanvas = document.getElementById(`chart-${assetName}`);
-                const chartImgData = chartCanvas.toDataURL('image/png', 1.0);
-                const chartImgWidth = pageWidth - (leftMargin + rightMargin);
-                const chartImgHeight = (chartCanvas.height * chartImgWidth) / chartCanvas.width;
-                if (yPos + chartImgHeight > doc.internal.pageSize.getHeight() - 20) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                doc.addImage(chartImgData, 'PNG', leftMargin, yPos, chartImgWidth, chartImgHeight);
-                yPos += chartImgHeight + 10;
+                let yPos = 20;
+                const leftMargin = 10;
+                const rightMargin = 10;
+                const pageWidth = doc.internal.pageSize.getWidth();
 
-                // --- History Table ---
-                if (yPos > doc.internal.pageSize.getHeight() - 60) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                yPos = writeText(`RIWAYAT PEMBELIAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-                yPos += 2;
+                const writeText = (text, options, y) => {
+                    doc.setFont('courier', options.fontStyle || 'normal');
+                    doc.setFontSize(options.fontSize || 11);
+                    doc.setTextColor(options.color || '#000000');
+                    doc.text(text, leftMargin, y);
+                    return y + (options.lineHeight || 7);
+                };
                 
-                const format = formatters[assetData.currency];
-                const historyHead = [['Periode', `Investasi`, `Harga Beli`, `Jumlah ${assetName} Dibeli`]];
-                const historyBody = purchases.map(p => [
-                    p.period,
-                    format(p.investment),
-                    format(p.price),
-                    p.amountBought.toFixed(8)
-                ]);
+                const addBorder = (pdfDoc) => {
+                    const pageCount = pdfDoc.internal.getNumberOfPages();
+                    for (let i = 1; i <= pageCount; i++) {
+                        pdfDoc.setPage(i);
+                        pdfDoc.setLineDashPattern([2, 2], 0);
+                        pdfDoc.rect(5, 5, pdfDoc.internal.pageSize.getWidth() - 10, pdfDoc.internal.pageSize.getHeight() - 10, 'S');
+                    }
+                    pdfDoc.setLineDashPattern([], 0);
+                };
 
-                doc.autoTable({
-                    startY: yPos,
-                    head: historyHead,
-                    body: historyBody,
-                    theme: 'grid',
-                    headStyles: { fillColor: '#00C49A', textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
-                    bodyStyles: { font: 'courier', fontStyle: 'bold', fontSize: 9 },
-                    styles: { cellPadding: 2, fontSize: 9 },
+                yPos = writeText(`Halo, ${pageUserName}!`, { fontSize: 12, fontStyle: 'bold' }, yPos);
+                yPos = writeText("Terima kasih telah menggunakan Kinawa Calculator.", {}, yPos);
+                yPos = writeText("Berikut adalah hasil dari strategi Dollar Cost Averaging yang kamu lakukan.", {}, yPos + 2);
+                yPos += 10;
+
+                const assetNames = Object.keys(portfolio);
+                assetNames.forEach((assetName, index) => {
+                    const assetData = portfolio[assetName];
+                    const purchases = assetData.purchases;
+
+                    if (purchases.length === 0) return; 
+                    
+                    if (index > 0) { // Add new page for subsequent assets
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    
+                    yPos = writeText(`GRAFIK PERTUMBUHAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
+                    yPos += 2;
+                    const chartCanvas = document.getElementById(`chart-${assetName}`);
+                    const chartImgData = chartCanvas.toDataURL('image/png', 1.0);
+                    
+                    const chartImgWidth = pageWidth - (leftMargin + rightMargin);
+                    const chartImgHeight = (chartCanvas.height * chartImgWidth) / chartCanvas.width;
+                    if (yPos + chartImgHeight > doc.internal.pageSize.getHeight() - 20) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.addImage(chartImgData, 'PNG', leftMargin, yPos, chartImgWidth, chartImgHeight);
+                    yPos += chartImgHeight + 10;
+
+                    if (yPos > doc.internal.pageSize.getHeight() - 60) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    yPos = writeText(`RIWAYAT PEMBELIAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
+                    yPos += 2;
+                    
+                    const format = formatters[assetData.currency];
+                    const historyHead = [['Periode', `Investasi`, `Harga Beli`, `Jumlah ${assetName} Dibeli`]];
+                    const historyBody = purchases.map(p => [
+                        p.period,
+                        format(p.investment),
+                        format(p.price),
+                        p.amountBought.toFixed(8)
+                    ]);
+
+                    doc.autoTable({
+                        startY: yPos,
+                        head: historyHead,
+                        body: historyBody,
+                        theme: 'grid',
+                        headStyles: { fillColor: '#00C49A', textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
+                        bodyStyles: { font: 'courier', fontStyle: 'bold', fontSize: 9 },
+                        styles: { cellPadding: 2, fontSize: 9 },
+                    });
+                    yPos = doc.autoTable.previous.finalY + 10;
+                    
+                    if (yPos > doc.internal.pageSize.getHeight() - 60) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+
+                    yPos = writeText(`RINGKASAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
+                    yPos += 2;
+                    
+                    const totalInvested = purchases.reduce((sum, p) => sum + p.investment, 0);
+                    const totalAmount = purchases.reduce((sum, p) => sum + p.amountBought, 0);
+                    const averagePrice = totalAmount > 0 ? totalInvested / totalAmount : 0;
+                    const latestPrice = purchases.length > 0 ? purchases[purchases.length - 1].price : 0;
+                    const portfolioValue = totalAmount * latestPrice;
+                    const pnl = portfolioValue - totalInvested;
+                    const pnlPercentage = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0;
+
+                    const summaryBody = [
+                        ['Total Investasi', format(totalInvested)],
+                        ['Harga Beli rata-rata', format(averagePrice)],
+                        [`Total ${assetName}`, totalAmount.toFixed(8)],
+                        ['Nilai Investasi', format(portfolioValue)],
+                        ['Untung/Rugi', `${format(pnl)} (${pnlPercentage.toFixed(2)}%)`],
+                    ];
+                    
+                    doc.autoTable({
+                        startY: yPos,
+                        body: summaryBody,
+                        theme: 'grid',
+                        didParseCell: function(data) {
+                            if (data.column.index === 0) {
+                                data.cell.styles.fillColor = '#00C49A';
+                                data.cell.styles.textColor = [255, 255, 255];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                        },
+                        headStyles: {font: 'courier'},
+                        bodyStyles: { font: 'courier', fontStyle: 'bold' },
+                        styles: { cellPadding: 2, fontSize: 9 },
+                    });
+                    yPos = doc.autoTable.previous.finalY + 15;
                 });
-                yPos = doc.autoTable.previous.finalY + 10;
                 
-                if (yPos > doc.internal.pageSize.getHeight() - 60) {
+                if (yPos > doc.internal.pageSize.getHeight() - 40) {
                     doc.addPage();
                     yPos = 20;
                 }
 
-                // --- Summary Table ---
-                yPos = writeText(`RINGKASAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-                yPos += 2;
+                yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
+                const disclaimerText = "Kripto adalah aset yang sangat berisiko, pastikan kamu telah mempelajari, dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi.";
+                const splitDisclaimer = doc.splitTextToSize(disclaimerText, doc.internal.pageSize.getWidth() - (leftMargin * 2));
+                doc.setFont('courier', 'italic');
+                doc.setFontSize(9);
+                doc.setTextColor(107, 114, 128);
+                doc.text(splitDisclaimer, leftMargin, yPos);
+                yPos += (splitDisclaimer.length * 5) + 10;
                 
-                const totalInvested = purchases.reduce((sum, p) => sum + p.investment, 0);
-                const totalAmount = purchases.reduce((sum, p) => sum + p.amountBought, 0);
-                const averagePrice = totalAmount > 0 ? totalInvested / totalAmount : 0;
-                const latestPrice = purchases.length > 0 ? purchases[purchases.length - 1].price : 0;
-                const portfolioValue = totalAmount * latestPrice;
-                const pnl = portfolioValue - totalInvested;
-                const pnlPercentage = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0;
+                yPos = writeText("Salam,", { fontSize: 11, fontStyle: 'normal', color: '#000000' }, yPos);
+                yPos += 15;
+                yPos = writeText("Edward C. Mangedong, S.Ked, AWP", { fontSize: 11, fontStyle: 'bold' }, yPos);
 
-                const summaryBody = [
-                    ['Total Investasi', format(totalInvested)],
-                    ['Harga Beli rata-rata', format(averagePrice)],
-                    [`Total ${assetName}`, totalAmount.toFixed(8)],
-                    ['Nilai Investasi', format(portfolioValue)],
-                    ['Untung/Rugi', `${format(pnl)} (${pnlPercentage.toFixed(2)}%)`],
-                ];
+                addBorder(doc);
+                doc.save(`Laporan Portofolio - ${pageUserName}.pdf`);
                 
-                doc.autoTable({
-                    startY: yPos,
-                    body: summaryBody,
-                    theme: 'grid',
-                    didParseCell: function(data) {
-                        if (data.column.index === 0) {
-                            data.cell.styles.fillColor = '#00C49A';
-                            data.cell.styles.textColor = [255, 255, 255];
-                            data.cell.styles.fontStyle = 'bold';
-                        }
-                    },
-                    headStyles: {font: 'courier'},
-                    bodyStyles: { font: 'courier', fontStyle: 'bold' },
-                    styles: { cellPadding: 2, fontSize: 9 },
-                });
-                yPos = doc.autoTable.previous.finalY + 15;
-            }
-            
-             if (yPos > doc.internal.pageSize.getHeight() - 40) {
-                doc.addPage();
-                yPos = 20;
-            }
+                isGeneratingPdf = false;
+                renderAll(); 
 
-            // --- PDF Footer ---
-            yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
-            const disclaimerText = "Kripto adalah aset yang sangat berisiko, pastikan kamu telah mempelajari, dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi.";
-            const splitDisclaimer = doc.splitTextToSize(disclaimerText, doc.internal.pageSize.getWidth() - (leftMargin * 2));
-            doc.setFont('courier', 'italic');
-            doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128);
-            doc.text(splitDisclaimer, leftMargin, yPos);
-            yPos += (splitDisclaimer.length * 5) + 10;
-            
-            yPos = writeText("Salam,", { fontSize: 11, fontStyle: 'normal', color: '#000000' }, yPos);
-            yPos += 15;
-            yPos = writeText("Edward C. Mangedong, S.Ked, AWP", { fontSize: 11, fontStyle: 'bold' }, yPos);
-
-            addBorder(doc); // Add border to all pages at the end
-            doc.save(`Laporan Portofolio - ${pageUserName}.pdf`);
-            
-            downloadPdfBtn.disabled = false;
+                downloadPdfBtn.disabled = false;
+            }, 500);
         }
 
         // --- EVENT LISTENERS ---
