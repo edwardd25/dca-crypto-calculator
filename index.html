@@ -74,7 +74,7 @@
                 </div>
                  <div>
                     <label for="initial-asset-name" class="block text-sm font-medium text-left text-[#333446] mb-2">Nama Aset Pertama</label>
-                    <input type="text" id="initial-asset-name" value="" placeholder="Contoh: BTC, ETH" class="w-full bg-white text-[#333446] rounded-lg border border-[#7f8caa] focus:ring-[#7f8caa] focus:border-[#7f8caa] py-2.5 px-4">
+                    <input type="text" id="initial-asset-name" value="BTC" placeholder="Contoh: BTC, ETH" class="w-full bg-white text-[#333446] rounded-lg border border-[#7f8caa] focus:ring-[#7f8caa] focus:border-[#7f8caa] py-2.5 px-4">
                 </div>
                  <div>
                     <label class="block text-sm font-medium text-left text-[#333446] mb-2">Pilih Mata Uang Utama</label>
@@ -125,10 +125,10 @@
             
             <footer class="text-center mt-16 pt-8 border-t border-[#7f8caa]">
                 <p class="text-sm text-[#333446] leading-relaxed max-w-xl mx-auto">
-                    <strong>Penafian:</strong> Kalkulator ini membantu anda dalam melakukan riset investasi aset kripto. Investasi aset kripto memiliki risiko tinggi.
-                    Lakukan riset Anda sendiri (DYOR)!
+                    <strong>Penafian:</strong> Kalkulator ini hanya untuk tujuan edukasi dan simulasi. Investasi aset kripto memiliki risiko tinggi.
+                    Lakukan riset Anda sendiri (DYOR) dan jangan menganggap ini sebagai nasihat keuangan.
                 </p>
-                <a href="https://t.me/edwardd_cm" target="_blank" rel="noopener noreferrer" class="text-sm text-[#333446] mt-4 inline-block hover:underline font-semibold">
+                <a href="https://t.me/edwardmangedong" target="_blank" rel="noopener noreferrer" class="text-sm text-[#333446] mt-4 inline-block hover:underline font-semibold">
                     Dibuat oleh Edward C. Mangedong
                 </a>
             </footer>
@@ -494,13 +494,27 @@
             const pageUserName = userName || 'Investor';
             
             let yPos = 20;
-            const leftMargin = 15;
+            const leftMargin = 10;
+            const rightMargin = 10;
+            const pageWidth = doc.internal.pageSize.getWidth();
+
             const writeText = (text, options, y) => {
+                doc.setFont('courier', options.fontStyle || 'normal');
                 doc.setFontSize(options.fontSize || 11);
-                doc.setFont('helvetica', options.fontStyle || 'normal');
                 doc.setTextColor(options.color || '#000000');
                 doc.text(text, leftMargin, y);
                 return y + (options.lineHeight || 7);
+            };
+            
+            // Add dashed border to all pages
+            const addBorder = (pdfDoc) => {
+                 const pageCount = pdfDoc.internal.getNumberOfPages();
+                 for (let i = 1; i <= pageCount; i++) {
+                    pdfDoc.setPage(i);
+                    pdfDoc.setLineDashPattern([2, 2], 0);
+                    pdfDoc.rect(5, 5, pdfDoc.internal.pageSize.getWidth() - 10, pdfDoc.internal.pageSize.getHeight() - 10, 'S');
+                 }
+                 pdfDoc.setLineDashPattern([], 0); // Reset dash pattern
             };
 
             // --- PDF Header ---
@@ -520,8 +534,26 @@
                     doc.addPage();
                     yPos = 20;
                 }
+                
+                // --- Chart ---
+                yPos = writeText(`GRAFIK PERTUMBUHAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
+                yPos += 2;
+                const chartCanvas = document.getElementById(`chart-${assetName}`);
+                const chartImgData = chartCanvas.toDataURL('image/png', 1.0);
+                const chartImgWidth = pageWidth - (leftMargin + rightMargin);
+                const chartImgHeight = (chartCanvas.height * chartImgWidth) / chartCanvas.width;
+                if (yPos + chartImgHeight > doc.internal.pageSize.getHeight() - 20) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                doc.addImage(chartImgData, 'PNG', leftMargin, yPos, chartImgWidth, chartImgHeight);
+                yPos += chartImgHeight + 10;
 
                 // --- History Table ---
+                if (yPos > doc.internal.pageSize.getHeight() - 60) {
+                    doc.addPage();
+                    yPos = 20;
+                }
                 yPos = writeText(`RIWAYAT PEMBELIAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
                 yPos += 2;
                 
@@ -539,8 +571,8 @@
                     head: historyHead,
                     body: historyBody,
                     theme: 'grid',
-                    headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], font: 'helvetica' },
-                    bodyStyles: { font: 'courier', fontSize: 9 },
+                    headStyles: { fillColor: '#00C49A', textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
+                    bodyStyles: { font: 'courier', fontStyle: 'bold', fontSize: 9 },
                     styles: { cellPadding: 2, fontSize: 9 },
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
@@ -576,12 +608,13 @@
                     theme: 'grid',
                     didParseCell: function(data) {
                         if (data.column.index === 0) {
-                            data.cell.styles.fillColor = [22, 163, 74];
+                            data.cell.styles.fillColor = '#00C49A';
                             data.cell.styles.textColor = [255, 255, 255];
                             data.cell.styles.fontStyle = 'bold';
                         }
                     },
-                    bodyStyles: { font: 'courier' },
+                    headStyles: {font: 'courier'},
+                    bodyStyles: { font: 'courier', fontStyle: 'bold' },
                     styles: { cellPadding: 2, fontSize: 9 },
                 });
                 yPos = doc.autoTable.previous.finalY + 15;
@@ -594,19 +627,19 @@
 
             // --- PDF Footer ---
             yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
-            const disclaimerText = "Kripto adalah aset yang sangat berisiko. Pastikan kamu telah mempelajari dan mempertimbangkan dengan baik tentang aset kripto sebelum berinvestasi!";
+            const disclaimerText = "Kripto adalah aset yang sangat berisiko, pastikan kamu telah mempelajari, dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi.";
             const splitDisclaimer = doc.splitTextToSize(disclaimerText, doc.internal.pageSize.getWidth() - (leftMargin * 2));
+            doc.setFont('courier', 'italic');
             doc.setFontSize(9);
-            doc.setFont('helvetica', 'italic');
             doc.setTextColor(107, 114, 128);
             doc.text(splitDisclaimer, leftMargin, yPos);
-            yPos += (splitDisclaimer.length * 10) + 10;
+            yPos += (splitDisclaimer.length * 5) + 10;
             
             yPos = writeText("Salam,", { fontSize: 11, fontStyle: 'normal', color: '#000000' }, yPos);
             yPos += 15;
-            yPos = writeText("Edward C. Mangedong", { fontSize: 11, fontStyle: 'bold' }, yPos);
+            yPos = writeText("Edward C. Mangedong, S.Ked, AWP", { fontSize: 11, fontStyle: 'bold' }, yPos);
 
-
+            addBorder(doc); // Add border to all pages at the end
             doc.save(`Laporan Portofolio - ${pageUserName}.pdf`);
             
             downloadPdfBtn.disabled = false;
