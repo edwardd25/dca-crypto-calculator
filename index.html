@@ -116,7 +116,7 @@
             
             <footer class="text-center mt-16 pt-8 border-t border-[#7f8caa]">
                 <p class="text-sm text-[#333446] leading-relaxed max-w-xl mx-auto">
-                    <strong>Penafian:</strong> Website ini membantu kamu untuk melakukan perhitungan dan perencanaan investasi dengan strategi DCA. Perlu diingat, investasi aset kripto memiliki risiko tinggi!
+                    <strong>Penafian:</strong> Website ini membantu anda untuk melakukan perhitungan dan perencanaan investasi dengan strategi DCA. Perlu diingat, investasi aset kripto memiliki risiko tinggi!
                 </p>
                 <a href="https://t.me/edwardd_cm" target="_blank" rel="noopener noreferrer" class="text-sm text-[#333446] mt-4 inline-block hover:underline font-semibold">
                     Dibuat oleh Edward C. Mangedong
@@ -512,8 +512,8 @@
             };
 
             yPos = writeText(`Halo, ${pageUserName}!`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-            yPos = writeWrappedText("Terima kasih telah menggunakan Kalkulator Dollar Cost Averaging (DCA) Kripto. Dollar Cost Averaging (DCA) adalah metode berinvestasi di mana Anda menanamkan jumlah dana yang sama secara rutin, terlepas dari naik-turunnya harga aset. Dengan begitu, ketika harga turun Anda akan memperoleh lebih banyak unit, dan ketika harga naik jumlah unit yang dibeli menjadi lebih sedikit, namun jadwal dan nominal investasinya tetap konsisten.", {}, yPos);
-            yPos = writeText("Berikut adalah hasil dari strategi DCA yang kamu lakukan.", {}, yPos + 2);
+            yPos = writeWrappedText("Terima kasih telah menggunakan Kalkulator Dollar Cost Averaging (DCA) Kripto. Dollar Cost Averaging (DCA) adalah metode berinvestasi di mana anda menanamkan jumlah dana yang sama secara rutin, terlepas dari naik-turunnya harga aset. Dengan begitu, ketika harga turun anda akan memperoleh lebih banyak unit, dan ketika harga naik jumlah unit yang dibeli menjadi lebih sedikit.", {}, yPos);
+            yPos = writeText("Berikut adalah hasil dari strategi DCA yang anda lakukan.", {}, yPos + 2);
             yPos += 10;
             
             const assetPerformances = [];
@@ -627,10 +627,10 @@
             }
 
             yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
-            const disclaimerText = "Harga aset saat ini yang digunakan dalam perhitungan berasal dari harga pembelian terakhir. Kripto adalah aset yang sangat berisiko. Pastikan kamu telah mempelajari dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi!";
+            const disclaimerText = "Harga aset saat ini yang digunakan dalam perhitungan berasal dari harga pembelian terakhir. Kripto adalah aset yang sangat berisiko. Pastikan anda telah mempelajari dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi!";
             const splitDisclaimer = doc.splitTextToSize(disclaimerText, usableWidth);
-            doc.setFont('courier', 'normal');
-            doc.setFontSize(11);
+            doc.setFont('courier', 'italic');
+            doc.setFontSize(10);
             doc.setTextColor('#000000');
             doc.text(splitDisclaimer, leftMargin, yPos);
             yPos += (splitDisclaimer.length * 5) + 10;
