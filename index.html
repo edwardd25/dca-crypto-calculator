@@ -19,8 +19,8 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #B8CFCE; /* New Background */
-            color: #333446; /* New Main Text Color */
+            background-color: #B8CFCE; 
+            color: #333446; 
         }
         .metric-card {
             background-color: #EAEFEF;
@@ -28,8 +28,8 @@
             border-radius: 0.75rem;
             padding: 1.5rem;
         }
-        .profit { color: #16a34a; } /* Darker green for light background */
-        .loss { color: #dc2626; } /* Darker red for light background */
+        .profit { color: #16a34a; } 
+        .loss { color: #dc2626; }
         .asset-btn {
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
@@ -126,13 +126,11 @@
     </div>
 
     <script>
-        // --- STATE MANAGEMENT ---
         let portfolio = {};
         let selectedAsset = '';
         let userName = 'Investor';
         let chartInstances = {};
 
-        // --- DOM ELEMENTS ---
         const welcomeScreen = document.getElementById('welcome-screen');
         const mainCalculator = document.getElementById('main-calculator');
         const startBtn = document.getElementById('start-btn');
@@ -147,7 +145,6 @@
         const displayName = document.getElementById('display-name');
 
 
-        // --- FORMATTING & PARSING ---
         const formatters = {
             'IDR': (num) => `Rp ${num.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`,
             'USD': (num) => `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -179,7 +176,6 @@
             });
         }
 
-        // --- RENDERING FUNCTIONS ---
         function renderAll() {
             renderAssetTabs();
             Object.keys(portfolio).forEach(assetName => {
@@ -390,7 +386,6 @@
             assetDetailsContainer.appendChild(section);
         }
 
-        // --- EVENT HANDLERS ---
         function handleStart() {
             const assetName = initialAssetNameInput.value.trim().toUpperCase();
             const currency = initialCurrencySelect.value;
@@ -503,10 +498,9 @@
                 doc.setFontSize(options.fontSize || 11);
                 doc.setTextColor(options.color || '#000000');
                 doc.text(splitText, leftMargin, y);
-                return y + (splitText.length * 5); // Adjust line height
+                return y + (splitText.length * 5); 
             };
             
-            // Add dashed border to all pages
             const addBorder = (pdfDoc) => {
                  const pageCount = pdfDoc.internal.getNumberOfPages();
                  for (let i = 1; i <= pageCount; i++) {
@@ -514,21 +508,16 @@
                     pdfDoc.setLineDashPattern([2, 2], 0);
                     pdfDoc.rect(5, 5, pdfDoc.internal.pageSize.getWidth() - 10, pdfDoc.internal.pageSize.getHeight() - 10, 'S');
                  }
-                 pdfDoc.setLineDashPattern([], 0); // Reset dash pattern
+                 pdfDoc.setLineDashPattern([], 0); 
             };
 
-            // ---[ MODIFIED SECTION: START ]---
-            // --- PDF Header ---
             yPos = writeText(`Halo, ${pageUserName}!`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-            yPos = writeWrappedText("Terima kasih telah menggunakan Kalkulator Dollar Cost Averaging Kripto. Dollar Cost Averaging (DCA) adalah metode berinvestasi di mana Anda menanamkan jumlah dana yang sama secara rutin, terlepas dari naik-turunnya harga aset. Dengan begitu, ketika harga turun Anda akan memperoleh lebih banyak unit, dan ketika harga naik jumlah unit yang dibeli menjadi lebih sedikit, namun jadwal dan nominal investasinya tetap konsisten.", {}, yPos);
-            // Lanjutkan dengan sisa teks
-            yPos = writeText("Berikut adalah hasil dari strategi Dollar Cost Averaging yang kamu lakukan.", {}, yPos + 2);
+            yPos = writeWrappedText("Terima kasih telah menggunakan Kalkulator Dollar Cost Averaging (DCA) Kripto. Dollar Cost Averaging (DCA) adalah metode berinvestasi di mana Anda menanamkan jumlah dana yang sama secara rutin, terlepas dari naik-turunnya harga aset. Dengan begitu, ketika harga turun Anda akan memperoleh lebih banyak unit, dan ketika harga naik jumlah unit yang dibeli menjadi lebih sedikit, namun jadwal dan nominal investasinya tetap konsisten.", {}, yPos);
+            yPos = writeText("Berikut adalah hasil dari strategi DCA yang kamu lakukan.", {}, yPos + 2);
             yPos += 10;
-            // ---[ MODIFIED SECTION: END ]---
             
             const assetPerformances = [];
 
-            // --- Loop through each asset ---
             for (const assetName of Object.keys(portfolio)) {
                 const assetData = portfolio[assetName];
                 const purchases = assetData.purchases;
@@ -551,7 +540,6 @@
                     yPos = 20;
                 }
                                 
-                // --- History Table ---
                 yPos = writeText(`RIWAYAT & RINGKASAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
                 yPos += 2;
                 
@@ -574,7 +562,6 @@
                 });
                 yPos = doc.autoTable.previous.finalY + 5;
 
-                // --- Summary Table ---
                 const summaryBody = [
                     ['Total Investasi', format(totalInvested)],
                     ['Harga Beli Rata-rata', format(averagePrice)],
@@ -599,7 +586,6 @@
                 });
                 yPos = doc.autoTable.previous.finalY + 7;
                 
-                // --- Interpretation Text ---
                  if (yPos > doc.internal.pageSize.getHeight() - 40) {
                     doc.addPage();
                     yPos = 20;
@@ -624,7 +610,6 @@
                 yPos = 20;
             }
             
-            // --- Multi-asset Comparison ---
             if (assetPerformances.length > 1) {
                 yPos = writeText("PERBANDINGAN ANTAR ASET", { fontSize: 12, fontStyle: 'bold' }, yPos);
                 
@@ -641,7 +626,6 @@
                 yPos += 10;
             }
 
-            // --- PDF Footer ---
             yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
             const disclaimerText = "Kripto adalah aset yang sangat berisiko. Pastikan kamu telah mempelajari dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi!";
             const splitDisclaimer = doc.splitTextToSize(disclaimerText, usableWidth);
@@ -655,13 +639,12 @@
             yPos += 15;
             yPos = writeText("Edward C. Mangedong, AWP", { fontSize: 11, fontStyle: 'bold' }, yPos);
 
-            addBorder(doc); // Add border to all pages at the end
+            addBorder(doc); 
             doc.save(`Laporan Analisa - ${pageUserName}.pdf`);
             
             downloadPdfBtn.disabled = false;
         }
 
-        // --- EVENT LISTENERS ---
         startBtn.addEventListener('click', handleStart);
         addAssetBtn.addEventListener('click', () => {
              const assetName = newAssetNameInput.value.trim().toUpperCase();
