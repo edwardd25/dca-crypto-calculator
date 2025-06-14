@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalkulator Dollar Cost Averaging Kripto</title>
+    <title>Kalkulator Dollar Cost Averaging</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -14,6 +14,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 
     <style>
@@ -53,6 +55,33 @@
         .hidden {
             display: none;
         }
+        .file-upload-label {
+            border: 2px dashed #7f8caa;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        .file-upload-label:hover {
+            background-color: rgba(127, 140, 170, 0.1);
+        }
+        .file-name-span.error {
+            color: #dc2626;
+            font-weight: 500;
+        }
+        .file-name-span.success {
+            color: #16a34a;
+            font-weight: 500;
+        }
+        #chart-container:-webkit-full-screen {
+            background-color: #EAEFEF;
+            padding: 20px;
+        }
+        #chart-container:fullscreen {
+            background-color: #EAEFEF;
+            padding: 20px;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -63,15 +92,15 @@
             <h1 class="text-3xl font-bold mb-2 text-[#333446]">Selamat Datang!</h1>
             <p class="text-[#333446] mb-6">Untuk memulai, masukkan nama dan aset pertama Anda.</p>
             <div class="space-y-4">
-                 <div>
+                <div>
                     <label for="initial-user-name" class="block text-sm font-medium text-left text-[#333446] mb-2">Nama Anda</label>
                     <input type="text" id="initial-user-name" placeholder="Masukkan nama Anda..." class="w-full bg-white text-[#333446] rounded-lg border border-[#7f8caa] focus:ring-[#7f8caa] focus:border-[#7f8caa] py-2.5 px-4">
                 </div>
-                 <div>
+                <div>
                     <label for="initial-asset-name" class="block text-sm font-medium text-left text-[#333446] mb-2">Nama Aset Pertama</label>
                     <input type="text" id="initial-asset-name" value="" placeholder="Contoh: BTC, ETH" class="w-full bg-white text-[#333446] rounded-lg border border-[#7f8caa] focus:ring-[#7f8caa] focus:border-[#7f8caa] py-2.5 px-4">
                 </div>
-                 <div>
+                <div>
                     <label class="block text-sm font-medium text-left text-[#333446] mb-2">Pilih Mata Uang Utama</label>
                     <select id="initial-currency" class="w-full bg-white text-[#333446] rounded-lg border border-[#7f8caa] focus:ring-[#7f8caa] focus:border-[#7f8caa] py-2.5 px-4">
                         <option value="IDR">Rupiah (IDR)</option>
@@ -95,7 +124,7 @@
             <div class="mb-6">
                 <label class="block text-sm font-medium text-[#333446] mb-2">Aset Anda</label>
                 <div class="flex flex-wrap gap-2 items-center" id="asset-tabs-container">
-                    </div>
+                </div>
                 <div class="flex gap-2 mt-4">
                     <input type="text" id="new-asset-name" placeholder="Nama aset baru..." class="w-full bg-[#EAEFEF] text-[#333446] rounded-lg border border-[#7f8caa] focus:ring-[#7f8caa] focus:border-[#7f8caa] py-2.5 px-4">
                     <button id="add-asset-btn" class="bg-[#7f8caa] hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg whitespace-nowrap">Tambah Aset</button>
@@ -103,7 +132,7 @@
             </div>
 
             <div id="asset-details-container">
-                </div>
+            </div>
             
             <div class="mt-8 flex justify-end">
                 <button id="download-pdf-btn" class="bg-[#7f8caa] hover:bg-opacity-90 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
@@ -116,7 +145,7 @@
             
             <footer class="text-center mt-16 pt-8 border-t border-[#7f8caa]">
                 <p class="text-sm text-[#333446] leading-relaxed max-w-xl mx-auto">
-                    <strong>Penafian:</strong> Website ini membantu anda untuk melakukan perhitungan dan perencanaan investasi dengan strategi DCA. Perlu diingat, investasi aset kripto memiliki risiko tinggi!
+                    <strong>Penafian:</strong> Website ini membantu anda untuk melakukan perhitungan dan perencanaan investasi dengan strategi DCA.
                 </p>
                 <a href="https://t.me/edwardd_cm" target="_blank" rel="noopener noreferrer" class="text-sm text-[#333446] mt-4 inline-block hover:underline font-semibold">
                     Dibuat oleh Edward C. Mangedong
@@ -144,6 +173,10 @@
         const downloadPdfBtn = document.getElementById('download-pdf-btn');
         const displayName = document.getElementById('display-name');
 
+        const ICONS = {
+            expand: `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#333446] pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 8V4a1 1 0 011-1h4a1 1 0 110 2H5v3a1 1 0 11-2 0zM3 12v4a1 1 0 001 1h4a1 1 0 100-2H5v-3a1 1 0 10-2 0zm14-8h-4a1 1 0 110-2h4a1 1 0 011 1v4a1 1 0 11-2 0V4zM12 17h4a1 1 0 001-1v-4a1 1 0 10-2 0v3h-3a1 1 0 100 2z" clip-rule="evenodd" /></svg>`,
+            collapse: `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#333446] pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 12V8a1 1 0 011-1h4a1 1 0 110 2H7v3a1 1 0 11-2 0zm-2-8h4a1 1 0 011 1v4a1 1 0 11-2 0V5H4a1 1 0 110-2zm12 8a1 1 0 01-1 1h-4a1 1 0 110-2h3V8a1 1 0 112 0v4zm-1-8a1 1 0 00-1-1h-4a1 1 0 100 2h3v3a1 1 0 102 0V5z" clip-rule="evenodd" /></svg>`
+        };
 
         const formatters = {
             'IDR': (num) => `Rp ${num.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`,
@@ -172,7 +205,7 @@
                 return;
             }
             input.value = num.toLocaleString(currency === 'IDR' ? 'id-ID' : 'en-US', {
-                 maximumFractionDigits: currency === 'USD' ? 20 : 0 
+                maximumFractionDigits: currency === 'USD' ? 20 : 0 
             });
         }
 
@@ -199,7 +232,7 @@
                 tab.dataset.asset = name;
                 tab.innerHTML = `
                     <span>${name}</span>
-                    ${assetNames.length > 1 ? `<button class="delete-asset-btn" data-asset-delete="${name}">
+                    ${assetNames.length > 1 ? `<button class="delete-asset-btn p-1 rounded-full -mr-2" data-asset-delete="${name}">
                         <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>` : ''}
                 `;
@@ -292,19 +325,21 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Investasi',
+                        label: 'Total Investasi',
                         data: investmentData,
-                        borderColor: '#00C49A',
-                        backgroundColor: 'rgba(0, 196, 154, 0.1)',
+                        borderColor: '#7f8caa',
+                        backgroundColor: 'rgba(127, 140, 170, 0.1)',
                         fill: true,
-                        tension: 0.1
+                        tension: 0.1,
+                        borderWidth: 2
                     }, {
-                        label: 'Nilai Investasi',
+                        label: 'Nilai Portofolio',
                         data: valueData,
                         borderColor: '#F8E16C',
-                        backgroundColor: 'rgba(248, 225, 108, 0.1)',
+                        backgroundColor: 'rgba(248, 225, 108, 0.2)',
                         fill: true,
-                        tension: 0.1
+                        tension: 0.1,
+                        borderWidth: 2
                     }]
                 },
                 options: {
@@ -329,7 +364,9 @@
             section.innerHTML = `
                 <main class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
                     <div class="lg:col-span-2">
+                        <!-- Manual Entry Form -->
                         <div class="bg-[#EAEFEF] border border-[#7f8caa] p-6 rounded-xl shadow-lg mb-8">
+                                <h3 class="text-xl font-bold mb-4">Entri Pembelian Manual</h3>
                                 <form data-asset-form="${assetName}" class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium text-[#333446] mb-2">Jumlah Investasi (${currency})</label>
@@ -345,9 +382,36 @@
                                     </div>
                                 </form>
                         </div>
+                        
+                        <!-- File Simulation Section -->
+                        <div class="bg-[#EAEFEF] border border-[#7f8caa] p-6 rounded-xl shadow-lg mb-8" id="file-simulation-section-${assetName}">
+                            <h3 class="text-xl font-bold mb-4">Simulasi DCA dari File</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-[#333446] mb-2">Jumlah Investasi per Periode (${currency})</label>
+                                    <input type="text" inputmode="numeric" data-input="simulation-investment" placeholder="Masukkan jumlah investasi tetap..." class="w-full bg-white border border-[#7f8caa] text-[#333446] rounded-lg py-2.5 px-4">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-[#333446] mb-2">Unggah File Harga Historis (.csv, .xls, .xlsx)</label>
+                                    <label for="file-upload-${assetName}" class="file-upload-label">
+                                        <span id="file-name-${assetName}" class="file-name-span">Klik untuk memilih file...</span>
+                                    </label>
+                                    <input type="file" id="file-upload-${assetName}" class="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                </div>
+                                <button data-simulate-asset="${assetName}" class="w-full bg-[#333446] hover:bg-opacity-90 text-white font-bold py-3 px-4 rounded-lg">Mulai Simulasi dari File</button>
+                            </div>
+                        </div>
+
                         <div class="bg-[#EAEFEF] border border-[#7f8caa] rounded-xl shadow-lg mb-8">
-                            <h3 class="text-xl font-bold p-6 border-b border-[#7f8caa]">Grafik Pertumbuhan: ${assetName}</h3>
-                            <div class="p-4 h-80">
+                            <div class="flex justify-between items-center p-6 border-b border-[#7f8caa]">
+                                <h3 class="text-xl font-bold">Grafik Pertumbuhan: ${assetName}</h3>
+                                <button data-fullscreen-chart="${assetName}" class="p-2 rounded-full hover:bg-gray-200 transition-transform duration-200 ease-in-out hover:scale-125" title="Tampilan Penuh">
+                                    <span id="fullscreen-icon-wrapper-${assetName}">
+                                        ${ICONS.expand}
+                                    </span>
+                                </button>
+                            </div>
+                            <div id="chart-container-${assetName}" class="p-4 h-80 relative bg-[#EAEFEF]">
                                 <canvas id="chart-${assetName}"></canvas>
                             </div>
                         </div>
@@ -384,6 +448,13 @@
                 </main>
             `;
             assetDetailsContainer.appendChild(section);
+
+            document.getElementById(`file-upload-${assetName}`).addEventListener('change', (e) => {
+                 const fileNameSpan = document.getElementById(`file-name-${assetName}`);
+                 const fileName = e.target.files[0] ? e.target.files[0].name : 'Klik untuk memilih file...';
+                 fileNameSpan.textContent = fileName;
+                 fileNameSpan.classList.remove('error', 'success');
+            });
         }
 
         function handleStart() {
@@ -444,19 +515,19 @@
 
         function handleDeleteAsset(assetName) {
              if (Object.keys(portfolio).length <= 1) {
-                alert("Tidak bisa menghapus aset terakhir.");
-                return;
-            }
-            if (confirm(`Apakah Anda yakin ingin menghapus aset "${assetName}" beserta seluruh riwayatnya?`)) {
-                if (chartInstances[assetName]) {
-                    chartInstances[assetName].destroy();
-                    delete chartInstances[assetName];
-                }
-                delete portfolio[assetName];
-                document.getElementById(`asset-section-${assetName}`).remove();
-                selectedAsset = Object.keys(portfolio)[0];
-                renderAll();
-            }
+                 alert("Tidak bisa menghapus aset terakhir.");
+                 return;
+             }
+             if (confirm(`Apakah Anda yakin ingin menghapus aset "${assetName}" beserta seluruh riwayatnya?`)) {
+                 if (chartInstances[assetName]) {
+                     chartInstances[assetName].destroy();
+                     delete chartInstances[assetName];
+                 }
+                 delete portfolio[assetName];
+                 document.getElementById(`asset-section-${assetName}`).remove();
+                 selectedAsset = Object.keys(portfolio)[0];
+                 renderAll();
+             }
         }
         
         function handleResetAsset(assetName) {
@@ -465,191 +536,307 @@
                 renderAll();
             }
         }
-        
-        async function handleDownloadPDF() {
-            if (Object.keys(portfolio).length === 0 || Object.values(portfolio).every(a => a.purchases.length === 0)) {
-                alert("Tidak ada data untuk diunduh. Silakan tambahkan riwayat pembelian terlebih dahulu.");
+
+        function processAndLoadData(prices, investmentAmount, assetName) {
+            const assetData = portfolio[assetName];
+            const fileNameSpan = document.getElementById(`file-name-${assetName}`);
+
+            if (prices.length === 0) {
+                fileNameSpan.textContent = 'Error: File tidak berisi data harga yang valid.';
+                fileNameSpan.classList.add('error');
+                return;
+            }
+
+            assetData.purchases = [];
+            prices.reverse().forEach((price, index) => {
+                const newPurchase = {
+                    id: Date.now() + index,
+                    period: index + 1,
+                    investment: investmentAmount,
+                    price: price,
+                    amountBought: investmentAmount / price,
+                };
+                assetData.purchases.push(newPurchase);
+            });
+            
+            fileNameSpan.textContent = `Simulasi berhasil! ${prices.length} data ditambahkan.`;
+            fileNameSpan.classList.add('success');
+            renderAll();
+        }
+
+        function handleFileSimulation(assetName) {
+            const assetData = portfolio[assetName];
+            const fileInput = document.getElementById(`file-upload-${assetName}`);
+            const investmentInput = document.querySelector(`#file-simulation-section-${assetName} [data-input="simulation-investment"]`);
+            const file = fileInput.files[0];
+            const investmentAmount = parseFloat(getCleanNumber(investmentInput.value, assetData.currency));
+            const fileNameSpan = document.getElementById(`file-name-${assetName}`);
+
+            fileNameSpan.classList.remove('error', 'success');
+
+
+            if (!file) {
+                fileNameSpan.textContent = 'Error: Silakan pilih file terlebih dahulu.';
+                fileNameSpan.classList.add('error');
+                return;
+            }
+            if (isNaN(investmentAmount) || investmentAmount <= 0) {
+                fileNameSpan.textContent = 'Error: Silakan masukkan jumlah investasi.';
+                fileNameSpan.classList.add('error');
                 return;
             }
             
-            downloadPdfBtn.disabled = true;
-            
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'mm', 'a4');
-            const pageUserName = userName || 'Investor';
-            
-            let yPos = 20;
-            const leftMargin = 10;
-            const rightMargin = 10;
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const usableWidth = pageWidth - leftMargin - rightMargin;
+            if (!confirm(`Ini akan menghapus semua riwayat pembelian manual untuk aset ${assetName} dan menggantinya dengan data dari file. Lanjutkan?`)) {
+                return;
+            }
 
-            const writeText = (text, options, y) => {
-                doc.setFont('courier', options.fontStyle || 'normal');
-                doc.setFontSize(options.fontSize || 11);
-                doc.setTextColor(options.color || '#000000');
-                doc.text(text, leftMargin, y);
-                return y + (options.lineHeight || 7);
-            };
+            const fileName = file.name.toLowerCase();
 
-            const writeWrappedText = (text, options, y) => {
-                const splitText = doc.splitTextToSize(text, usableWidth);
-                doc.setFont('courier', options.fontStyle || 'normal');
-                doc.setFontSize(options.fontSize || 11);
-                doc.setTextColor(options.color || '#000000');
-                doc.text(splitText, leftMargin, y);
-                return y + (splitText.length * 5); 
-            };
+            if (fileName.endsWith('.csv')) {
+                 Papa.parse(file, {
+                     header: false,
+                     dynamicTyping: true,
+                     skipEmptyLines: true,
+                     complete: function(results) {
+                         const prices = results.data.flat().filter(p => p !== null && !isNaN(p) && p > 0);
+                         processAndLoadData(prices, investmentAmount, assetName);
+                     },
+                     error: function(err) {
+                         fileNameSpan.textContent = `Error: Gagal memproses CSV. ${err.message}`;
+                         fileNameSpan.classList.add('error');
+                     }
+                 });
+            } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json_data = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                        const prices = json_data.flat().filter(p => p !== null && !isNaN(p) && p > 0);
+                        processAndLoadData(prices, investmentAmount, assetName);
+                    } catch (err) {
+                        fileNameSpan.textContent = `Error: Gagal memproses Excel. ${err.message}`;
+                        fileNameSpan.classList.add('error');
+                    }
+                };
+                reader.onerror = function (err) {
+                        fileNameSpan.textContent = `Error: Gagal membaca file.`;
+                        fileNameSpan.classList.add('error');
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                fileNameSpan.textContent = 'Error: Format file tidak didukung (.csv, .xls, .xlsx).';
+                fileNameSpan.classList.add('error');
+            }
+        }
+        
+        async function handleDownloadPDF() {
+             if (Object.keys(portfolio).length === 0 || Object.values(portfolio).every(a => a.purchases.length === 0)) {
+                 alert("Tidak ada data untuk diunduh. Silakan tambahkan riwayat pembelian terlebih dahulu.");
+                 return;
+             }
             
-            const addBorder = (pdfDoc) => {
+             downloadPdfBtn.disabled = true;
+            
+             const { jsPDF } = window.jspdf;
+             const doc = new jsPDF('p', 'mm', 'a4');
+             const pageUserName = userName || 'Investor';
+            
+             let yPos = 20;
+             const leftMargin = 10;
+             const rightMargin = 10;
+             const pageWidth = doc.internal.pageSize.getWidth();
+             const usableWidth = pageWidth - leftMargin - rightMargin;
+
+             const writeText = (text, options, y) => {
+                 doc.setFont('helvetica', options.fontStyle || 'normal');
+                 doc.setFontSize(options.fontSize || 11);
+                 doc.setTextColor(options.color || '#000000');
+                 doc.text(text, leftMargin, y);
+                 return y + (options.lineHeight || 7);
+             };
+
+             const writeWrappedText = (text, options, y) => {
+                 const splitText = doc.splitTextToSize(text, usableWidth);
+                 doc.setFont('helvetica', options.fontStyle || 'normal');
+                 doc.setFontSize(options.fontSize || 11);
+                 doc.setTextColor(options.color || '#000000');
+                 doc.text(splitText, leftMargin, y);
+                 return y + (splitText.length * 5); 
+             };
+            
+             const addBorder = (pdfDoc) => {
                  const pageCount = pdfDoc.internal.getNumberOfPages();
                  for (let i = 1; i <= pageCount; i++) {
-                    pdfDoc.setPage(i);
-                    pdfDoc.setLineDashPattern([2, 2], 0);
-                    pdfDoc.rect(5, 5, pdfDoc.internal.pageSize.getWidth() - 10, pdfDoc.internal.pageSize.getHeight() - 10, 'S');
+                     pdfDoc.setPage(i);
+                     pdfDoc.setLineDashPattern([2, 2], 0);
+                     pdfDoc.rect(5, 5, pdfDoc.internal.pageSize.getWidth() - 10, pdfDoc.internal.pageSize.getHeight() - 10, 'S');
                  }
                  pdfDoc.setLineDashPattern([], 0); 
-            };
+             };
 
-            yPos = writeText(`Halo, ${pageUserName}!`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-            yPos = writeWrappedText("Terima kasih telah menggunakan Kalkulator Dollar Cost Averaging (DCA) Kripto. Dollar Cost Averaging (DCA) adalah metode berinvestasi di mana anda menanamkan jumlah dana yang sama secara rutin, terlepas dari naik-turunnya harga aset. Dengan begitu, ketika harga turun anda akan memperoleh lebih banyak unit, dan ketika harga naik jumlah unit yang dibeli menjadi lebih sedikit.", {}, yPos);
-            yPos = writeText("Berikut adalah hasil dari strategi DCA anda.", {}, yPos + 2);
-            yPos += 10;
+             yPos = writeText(`Halo, ${pageUserName}!`, { fontSize: 14, fontStyle: 'bold' }, yPos);
+             yPos = writeWrappedText("Terima kasih telah menggunakan Kalkulator Dollar Cost Averaging (DCA). Dollar Cost Averaging (DCA) adalah metode berinvestasi di mana Anda menanamkan jumlah dana yang sama secara rutin, terlepas dari naik-turunnya harga aset.", {}, yPos);
+             yPos = writeText("Berikut adalah hasil dari strategi DCA Anda.", {}, yPos + 2);
+             yPos += 10;
             
-            const assetPerformances = [];
+             const assetPerformances = [];
 
-            for (const assetName of Object.keys(portfolio)) {
-                const assetData = portfolio[assetName];
-                const purchases = assetData.purchases;
+             for (const assetName of Object.keys(portfolio)) {
+                 const assetData = portfolio[assetName];
+                 const purchases = assetData.purchases;
 
-                if (purchases.length === 0) continue; 
+                 if (purchases.length === 0) continue; 
                 
-                const format = formatters[assetData.currency];
-                const totalInvested = purchases.reduce((sum, p) => sum + p.investment, 0);
-                const totalAmount = purchases.reduce((sum, p) => sum + p.amountBought, 0);
-                const averagePrice = totalAmount > 0 ? totalInvested / totalAmount : 0;
-                const latestPrice = purchases.length > 0 ? purchases[purchases.length - 1].price : 0;
-                const portfolioValue = totalAmount * latestPrice;
-                const pnl = portfolioValue - totalInvested;
-                const pnlPercentage = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0;
+                 const format = formatters[assetData.currency];
+                 const totalInvested = purchases.reduce((sum, p) => sum + p.investment, 0);
+                 const totalAmount = purchases.reduce((sum, p) => sum + p.amountBought, 0);
+                 const averagePrice = totalAmount > 0 ? totalInvested / totalAmount : 0;
+                 const latestPrice = purchases.length > 0 ? purchases[purchases.length - 1].price : 0;
+                 const portfolioValue = totalAmount * latestPrice;
+                 const pnl = portfolioValue - totalInvested;
+                 const pnlPercentage = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0;
                 
-                assetPerformances.push({ name: assetName, pnl, pnlPercentage, currency: assetData.currency });
+                 assetPerformances.push({ name: assetName, pnl, pnlPercentage, currency: assetData.currency });
                 
-                if (yPos > doc.internal.pageSize.getHeight() - 80) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                                
-                yPos = writeText(`RIWAYAT & RINGKASAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
-                yPos += 2;
+                 if (yPos > doc.internal.pageSize.getHeight() - 80) {
+                     doc.addPage();
+                     yPos = 20;
+                 }
+                             
+                 yPos = writeText(`RIWAYAT & RINGKASAN: ${assetName}`, { fontSize: 12, fontStyle: 'bold' }, yPos);
+                 yPos += 2;
                 
-                const historyHead = [['Periode', `Investasi`, `Harga Beli`, `Jumlah ${assetName} Dibeli`]];
-                const historyBody = purchases.map(p => [
-                    p.period,
-                    format(p.investment),
-                    format(p.price),
-                    p.amountBought.toFixed(8)
-                ]);
+                 const historyHead = [['Periode', `Investasi`, `Harga Beli`, `Jumlah ${assetName} Dibeli`]];
+                 const historyBody = purchases.map(p => [
+                     p.period,
+                     format(p.investment),
+                     format(p.price),
+                     p.amountBought.toFixed(8)
+                 ]);
 
-                doc.autoTable({
-                    startY: yPos,
-                    head: historyHead,
-                    body: historyBody,
-                    theme: 'grid',
-                    headStyles: { fillColor: '#7f8caa', textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
-                    bodyStyles: { font: 'courier', fontStyle: 'bold', fontSize: 9 },
-                    styles: { cellPadding: 2, fontSize: 9 },
-                });
-                yPos = doc.autoTable.previous.finalY + 5;
+                 doc.autoTable({
+                     startY: yPos,
+                     head: historyHead,
+                     body: historyBody,
+                     theme: 'grid',
+                     headStyles: { fillColor: '#7f8caa', textColor: [255, 255, 255], font: 'helvetica', fontStyle: 'bold' },
+                     bodyStyles: { font: 'helvetica', fontSize: 9 },
+                     styles: { cellPadding: 2, fontSize: 9 },
+                 });
+                 yPos = doc.autoTable.previous.finalY + 5;
 
-                const summaryBody = [
-                    ['Total Investasi', format(totalInvested)],
-                    ['Harga Beli Rata-rata', format(averagePrice)],
-                    [`Total ${assetName} Terkumpul`, totalAmount.toFixed(8)],
-                    ['Nilai Investasi Saat Ini', format(portfolioValue)],
-                    ['Untung/Rugi (P/L)', `${format(pnl)} (${pnlPercentage.toFixed(2)}%)`],
-                ];
+                 const summaryBody = [
+                     ['Total Investasi', format(totalInvested)],
+                     ['Harga Beli Rata-rata', format(averagePrice)],
+                     [`Total ${assetName} Terkumpul`, totalAmount.toFixed(8)],
+                     ['Nilai Investasi Saat Ini', format(portfolioValue)],
+                     ['Untung/Rugi (P/L)', `${format(pnl)} (${pnlPercentage.toFixed(2)}%)`],
+                 ];
                 
-                doc.autoTable({
-                    startY: yPos,
-                    body: summaryBody,
-                    theme: 'grid',
-                    didParseCell: function(data) {
-                        if (data.column.index === 0) {
-                            data.cell.styles.fillColor = '#EAEFEF';
-                            data.cell.styles.textColor = [51, 52, 70];
-                            data.cell.styles.fontStyle = 'bold';
-                        }
-                    },
-                    bodyStyles: { font: 'courier', fontStyle: 'bold' },
-                    styles: { cellPadding: 2, fontSize: 9 },
-                });
-                yPos = doc.autoTable.previous.finalY + 7;
+                 doc.autoTable({
+                     startY: yPos,
+                     body: summaryBody,
+                     theme: 'plain',
+                     didParseCell: function(data) {
+                         if (data.column.index === 0) {
+                             data.cell.styles.fillColor = '#EAEFEF';
+                             data.cell.styles.textColor = [51, 52, 70];
+                             data.cell.styles.fontStyle = 'bold';
+                         }
+                     },
+                     bodyStyles: { font: 'helvetica' },
+                     styles: { cellPadding: 2, fontSize: 9, lineWidth: 0.1, lineColor: [127, 140, 170] },
+                 });
+                 yPos = doc.autoTable.previous.finalY + 7;
                 
-                 if (yPos > doc.internal.pageSize.getHeight() - 40) {
-                    doc.addPage();
-                    yPos = 20;
-                }
+                  if (yPos > doc.internal.pageSize.getHeight() - 40) {
+                     doc.addPage();
+                     yPos = 20;
+                 }
                 
-                yPos = writeText("Interpretasi:", { fontStyle: 'bold' }, yPos);
+                 yPos = writeText("Interpretasi:", { fontStyle: 'bold' }, yPos);
                 
-                let interpretationText = `Untuk aset ${assetName}, Anda telah menginvestasikan total ${format(totalInvested)} dan berhasil mengumpulkan ${totalAmount.toFixed(8)} ${assetName}. Harga beli rata-rata Anda adalah ${format(averagePrice)}. `;
-                if (pnl > 0) {
-                    interpretationText += `Saat ini, portofolio Anda untuk aset ini mengalami keuntungan sebesar ${format(pnl)} (${pnlPercentage.toFixed(2)}%).`;
-                } else if (pnl < 0) {
-                    interpretationText += `Saat ini, portofolio Anda untuk aset ini mengalami kerugian sebesar ${format(pnl)} (${pnlPercentage.toFixed(2)}%).`;
-                } else {
-                    interpretationText += "Saat ini, nilai portofolio Anda sama dengan total investasi (impas).";
-                }
-                yPos = writeWrappedText(interpretationText, {}, yPos);
-                yPos += 10;
-            }
+                 let interpretationText = `Untuk aset ${assetName}, Anda telah menginvestasikan total ${format(totalInvested)} dan mengumpulkan ${totalAmount.toFixed(8)} ${assetName}. Harga beli rata-rata Anda adalah ${format(averagePrice)}. `;
+                 if (pnl > 0) {
+                     interpretationText += `Saat ini, portofolio Anda untuk aset ini mengalami keuntungan sebesar ${format(pnl)} (${pnlPercentage.toFixed(2)}%).`;
+                 } else if (pnl < 0) {
+                     interpretationText += `Saat ini, portofolio Anda untuk aset ini mengalami kerugian sebesar ${format(pnl)} (${pnlPercentage.toFixed(2)}%).`;
+                 } else {
+                     interpretationText += "Saat ini, nilai portofolio Anda sama dengan total investasi (impas).";
+                 }
+                 yPos = writeWrappedText(interpretationText, {}, yPos);
+                 yPos += 10;
+             }
 
-             if (yPos > doc.internal.pageSize.getHeight() - 60) {
-                doc.addPage();
-                yPos = 20;
-            }
+              if (yPos > doc.internal.pageSize.getHeight() - 60) {
+                 doc.addPage();
+                 yPos = 20;
+             }
             
-            if (assetPerformances.length > 1) {
-                yPos = writeText("PERBANDINGAN ANTAR ASET", { fontSize: 12, fontStyle: 'bold' }, yPos);
+             if (assetPerformances.length > 1) {
+                 yPos = writeText("PERBANDINGAN ANTAR ASET", { fontSize: 12, fontStyle: 'bold' }, yPos);
                 
-                assetPerformances.sort((a, b) => b.pnlPercentage - a.pnlPercentage);
-                const bestAsset = assetPerformances[0];
-                const worstAsset = assetPerformances[assetPerformances.length - 1];
-                const formatBest = formatters[bestAsset.currency];
-                const formatWorst = formatters[worstAsset.currency];
+                 assetPerformances.sort((a, b) => b.pnlPercentage - a.pnlPercentage);
+                 const bestAsset = assetPerformances[0];
+                 const worstAsset = assetPerformances[assetPerformances.length - 1];
+                 const formatBest = formatters[bestAsset.currency];
+                 const formatWorst = formatters[worstAsset.currency];
 
-                let comparisonText = `Berdasarkan persentase, aset dengan performa terbaik adalah ${bestAsset.name} dengan keuntungan ${bestAsset.pnlPercentage.toFixed(2)}% (${formatBest(bestAsset.pnl)}). `;
-                comparisonText += `Sementara itu, aset dengan performa terendah adalah ${worstAsset.name}, dengan ${worstAsset.pnl >= 0 ? 'keuntungan' : 'kerugian'} ${worstAsset.pnlPercentage.toFixed(2)}% (${formatWorst(worstAsset.pnl)}).`;
+                 let comparisonText = `Berdasarkan persentase, aset dengan performa terbaik adalah ${bestAsset.name} dengan keuntungan ${bestAsset.pnlPercentage.toFixed(2)}% (${formatBest(bestAsset.pnl)}). `;
+                 comparisonText += `Sementara itu, aset dengan performa terendah adalah ${worstAsset.name}, dengan ${worstAsset.pnl >= 0 ? 'keuntungan' : 'kerugian'} ${worstAsset.pnlPercentage.toFixed(2)}% (${formatWorst(worstAsset.pnl)}).`;
 
-                yPos = writeWrappedText(comparisonText, {}, yPos + 2);
-                yPos += 10;
-            }
+                 yPos = writeWrappedText(comparisonText, {}, yPos + 2);
+                 yPos += 10;
+             }
 
-            yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
-            const disclaimerText = "Harga aset saat ini yang digunakan dalam perhitungan berasal dari harga pembelian terakhir. Kripto adalah aset yang sangat berisiko. Pastikan anda telah mempelajari dan mempertimbangkan dengan baik tentang aset kripto, sebelum berinvestasi!";
-            const splitDisclaimer = doc.splitTextToSize(disclaimerText, usableWidth);
-            doc.setFont('courier', 'italic');
-            doc.setFontSize(10);
-            doc.setTextColor('#000000');
-            doc.text(splitDisclaimer, leftMargin, yPos);
-            yPos += (splitDisclaimer.length * 5) + 10;
+             yPos = writeText("Catatan:", { fontStyle: 'bold' }, yPos);
+             const disclaimerText = "Harga aset saat ini yang digunakan dalam perhitungan berasal dari harga pembelian terakhir. Pastikan Anda telah mempelajari dan mempertimbangkan dengan baik mengenai aset/instrumen dan strategi yang digunakan, sebelum berinvestasi!";
+             const splitDisclaimer = doc.splitTextToSize(disclaimerText, usableWidth);
+             doc.setFont('helvetica', 'italic');
+             doc.setFontSize(9);
+             doc.setTextColor('#333446');
+             doc.text(splitDisclaimer, leftMargin, yPos);
+             yPos += (splitDisclaimer.length * 5) + 10;
             
-            yPos = writeText("Salam,", { fontSize: 11, fontStyle: 'bold', color: '#000000' }, yPos);
-            yPos += 15;
-            yPos = writeText("Edward C. Mangedong", { fontSize: 11, fontStyle: 'bold' }, yPos);
+             yPos = writeText("Salam,", { fontSize: 11, fontStyle: 'normal', color: '#000000' }, yPos);
+             yPos += 15;
+             yPos = writeText("Edward C. Mangedong", { fontSize: 11, fontStyle: 'bold' }, yPos);
 
-            addBorder(doc); 
-            doc.save(`Laporan Analisa - ${pageUserName}.pdf`);
+             addBorder(doc); 
+             doc.save(`Laporan Analisa DCA - ${pageUserName}.pdf`);
             
-            downloadPdfBtn.disabled = false;
+             downloadPdfBtn.disabled = false;
         }
+        
+        function handleFullscreenChange() {
+            const fullscreenElement = document.fullscreenElement;
+            
+            Object.keys(portfolio).forEach(assetName => {
+                const iconWrapper = document.getElementById(`fullscreen-icon-wrapper-${assetName}`);
+                if (iconWrapper) {
+                    iconWrapper.innerHTML = ICONS.expand;
+                }
+            });
+
+            if (fullscreenElement && fullscreenElement.id.startsWith('chart-container-')) {
+                const assetName = fullscreenElement.id.replace('chart-container-', '');
+                const iconWrapper = document.getElementById(`fullscreen-icon-wrapper-${assetName}`);
+                if (iconWrapper) {
+                    iconWrapper.innerHTML = ICONS.collapse;
+                }
+            }
+        }
+
 
         startBtn.addEventListener('click', handleStart);
         addAssetBtn.addEventListener('click', () => {
              const assetName = newAssetNameInput.value.trim().toUpperCase();
              if(assetName) {
-                 const currency = portfolio[selectedAsset].currency;
+                 const currency = portfolio[Object.keys(portfolio)[0]].currency; 
                  addAsset(assetName, currency);
                  newAssetNameInput.value = '';
              }
@@ -687,16 +874,38 @@
                 });
                 renderAll();
             }
+             if (e.target.hasAttribute('data-simulate-asset')) {
+                 handleFileSimulation(e.target.dataset.simulateAsset);
+            }
+
+            const fullscreenBtn = e.target.closest('[data-fullscreen-chart]');
+            if (fullscreenBtn) {
+                const assetName = fullscreenBtn.dataset.fullscreenChart;
+                const chartContainer = document.getElementById(`chart-container-${assetName}`);
+                if (chartContainer) {
+                    if (!document.fullscreenElement) {
+                        chartContainer.requestFullscreen().catch(err => {
+                            alert(`Error, browser Anda mungkin tidak mendukung fitur ini: ${err.message}`);
+                        });
+                    } else {
+                        document.exitFullscreen();
+                    }
+                }
+            }
         });
         
         assetDetailsContainer.addEventListener('input', e => {
             const target = e.target;
             if (target.hasAttribute('data-input')) {
-                const assetData = portfolio[selectedAsset];
-                formatInputValue(target, assetData.currency);
+                const assetData = portfolio[selectedAsset] || {};
+                const currency = assetData.currency || initialCurrencySelect.value;
+                formatInputValue(target, currency);
             }
         });
+
         downloadPdfBtn.addEventListener('click', handleDownloadPDF);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        
     </script>
 </body>
 </html>
