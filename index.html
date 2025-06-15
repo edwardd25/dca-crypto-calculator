@@ -542,7 +542,7 @@
             const fileNameSpan = document.getElementById(`file-name-${assetName}`);
 
             if (prices.length === 0) {
-                fileNameSpan.textContent = 'Error: File tidak berisi data harga yang valid.';
+                fileNameSpan.textContent = 'Error: Tidak ada data harga yang valid di kolom yang ditemukan.';
                 fileNameSpan.classList.add('error');
                 return;
             }
@@ -564,6 +564,7 @@
             renderAll();
         }
 
+        // --- UPDATED FUNCTION ---
         function handleFileSimulation(assetName) {
             const assetData = portfolio[assetName];
             const fileInput = document.getElementById(`file-upload-${assetName}`);
@@ -573,7 +574,6 @@
             const fileNameSpan = document.getElementById(`file-name-${assetName}`);
 
             fileNameSpan.classList.remove('error', 'success');
-
 
             if (!file) {
                 fileNameSpan.textContent = 'Error: Silakan pilih file terlebih dahulu.';
@@ -590,22 +590,55 @@
                 return;
             }
 
+            const processData = (data) => {
+                if (!data || data.length < 2) { 
+                    fileNameSpan.textContent = 'Error: File tidak memiliki data yang cukup (header dan data).';
+                    fileNameSpan.classList.add('error');
+                    return;
+                }
+
+                const headers = data[0].map(h => String(h).toLowerCase().trim());
+                const potentialColumns = ["Harga", "harga", "Price", "price", "Adj.closed", "Adj close"];
+                let priceColumnIndex = -1;
+
+                for (const colName of potentialColumns) {
+                    const index = headers.indexOf(colName);
+                    if (index !== -1) {
+                        priceColumnIndex = index;
+                        break;
+                    }
+                }
+
+                if (priceColumnIndex === -1) {
+                    fileNameSpan.textContent = 'Error: Kolom "harga", "price", atau "adj.closed" tidak ditemukan.';
+                    fileNameSpan.classList.add('error');
+                    return;
+                }
+
+                const prices = data
+                    .slice(1) 
+                    .map(row => row[priceColumnIndex])
+                    .filter(p => p !== null && !isNaN(parseFloat(p)) && parseFloat(p) > 0)
+                    .map(p => parseFloat(p));
+                
+                processAndLoadData(prices, investmentAmount, assetName);
+            };
+
             const fileName = file.name.toLowerCase();
 
             if (fileName.endsWith('.csv')) {
-                 Papa.parse(file, {
-                     header: false,
-                     dynamicTyping: true,
-                     skipEmptyLines: true,
-                     complete: function(results) {
-                         const prices = results.data.flat().filter(p => p !== null && !isNaN(p) && p > 0);
-                         processAndLoadData(prices, investmentAmount, assetName);
-                     },
-                     error: function(err) {
-                         fileNameSpan.textContent = `Error: Gagal memproses CSV. ${err.message}`;
-                         fileNameSpan.classList.add('error');
-                     }
-                 });
+                Papa.parse(file, {
+                    header: false,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        processData(results.data);
+                    },
+                    error: function(err) {
+                        fileNameSpan.textContent = `Error: Gagal memproses CSV. ${err.message}`;
+                        fileNameSpan.classList.add('error');
+                    }
+                });
             } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -614,17 +647,16 @@
                         const workbook = XLSX.read(data, {type: 'array'});
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
-                        const json_data = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                        const prices = json_data.flat().filter(p => p !== null && !isNaN(p) && p > 0);
-                        processAndLoadData(prices, investmentAmount, assetName);
+                        const json_data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+                        processData(json_data);
                     } catch (err) {
                         fileNameSpan.textContent = `Error: Gagal memproses Excel. ${err.message}`;
                         fileNameSpan.classList.add('error');
                     }
                 };
                 reader.onerror = function (err) {
-                        fileNameSpan.textContent = `Error: Gagal membaca file.`;
-                        fileNameSpan.classList.add('error');
+                    fileNameSpan.textContent = `Error: Gagal membaca file.`;
+                    fileNameSpan.classList.add('error');
                 };
                 reader.readAsArrayBuffer(file);
             } else {
@@ -754,9 +786,9 @@
                  yPos = doc.autoTable.previous.finalY + 7;
                 
                   if (yPos > doc.internal.pageSize.getHeight() - 40) {
-                     doc.addPage();
-                     yPos = 20;
-                 }
+                      doc.addPage();
+                      yPos = 20;
+                  }
                 
                  yPos = writeText("Interpretasi:", { fontStyle: 'bold' }, yPos);
                 
@@ -773,9 +805,9 @@
              }
 
               if (yPos > doc.internal.pageSize.getHeight() - 60) {
-                 doc.addPage();
-                 yPos = 20;
-             }
+                  doc.addPage();
+                  yPos = 20;
+              }
             
              if (assetPerformances.length > 1) {
                  yPos = writeText("PERBANDINGAN ANTAR ASET", { fontSize: 12, fontStyle: 'bold' }, yPos);
@@ -813,22 +845,22 @@
         }
         
         function handleFullscreenChange() {
-            const fullscreenElement = document.fullscreenElement;
+             const fullscreenElement = document.fullscreenElement;
             
-            Object.keys(portfolio).forEach(assetName => {
-                const iconWrapper = document.getElementById(`fullscreen-icon-wrapper-${assetName}`);
-                if (iconWrapper) {
-                    iconWrapper.innerHTML = ICONS.expand;
-                }
-            });
+             Object.keys(portfolio).forEach(assetName => {
+                 const iconWrapper = document.getElementById(`fullscreen-icon-wrapper-${assetName}`);
+                 if (iconWrapper) {
+                     iconWrapper.innerHTML = ICONS.expand;
+                 }
+             });
 
-            if (fullscreenElement && fullscreenElement.id.startsWith('chart-container-')) {
-                const assetName = fullscreenElement.id.replace('chart-container-', '');
-                const iconWrapper = document.getElementById(`fullscreen-icon-wrapper-${assetName}`);
-                if (iconWrapper) {
-                    iconWrapper.innerHTML = ICONS.collapse;
-                }
-            }
+             if (fullscreenElement && fullscreenElement.id.startsWith('chart-container-')) {
+                 const assetName = fullscreenElement.id.replace('chart-container-', '');
+                 const iconWrapper = document.getElementById(`fullscreen-icon-wrapper-${assetName}`);
+                 if (iconWrapper) {
+                     iconWrapper.innerHTML = ICONS.collapse;
+                 }
+             }
         }
 
 
@@ -876,7 +908,7 @@
             }
              if (e.target.hasAttribute('data-simulate-asset')) {
                  handleFileSimulation(e.target.dataset.simulateAsset);
-            }
+             }
 
             const fullscreenBtn = e.target.closest('[data-fullscreen-chart]');
             if (fullscreenBtn) {
